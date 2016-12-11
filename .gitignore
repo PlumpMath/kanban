@@ -13,3 +13,7 @@
 figwheel_server.log
 pom.xml
 pom.xml.asc
+/.idea/vcs.xml
+/.idea/*
+*.iml
+*.iml
