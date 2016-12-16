@@ -19,28 +19,32 @@
 (defn set-title! [board col-idx card-idx title]
   (swap! board assoc-in [:columns col-idx :cards card-idx title] title))
 
-(defn- update-title [card-cur title]
+(defn update-card-title! [card-cur title]
   (swap! card-cur assoc :title title))
 
-(defn- stop-editing [card-cur]
+(defn update-col-title! [col-cur title]
+  (swap! col-cur assoc :title title))
+
+(defn stop-editing! [card-cur]
   (swap! card-cur dissoc :editing))
 
-(defn- start-editing [card-cur]
+(defn start-editing! [card-cur]
   (swap! card-cur assoc :editing true))
 
-(defn- add-card [col-cur title]
-  (swap! col-cur assoc [:cards] {:title title}))
+(defn add-card! [col-cur]
+  (swap! col-cur update :cards conj {:title "Untitled"
+                                     :editing true}))
 
-(defn- add-column []
-  (swap! app-state update :columns conj {:title " "
+(defn add-column! []
+  (swap! app-state update :columns conj {:title "Untitled"
                                      :cards   []
                                      :editing true}))
 
-(defn NewCard []
-  [:div.new-card "+ add a card"])
+(defn NewCard [col-cur]
+  [:div.new-card {:on-click #(add-card! col-cur)}"+ add a card"])
 
 (defn NewColumn []
-  [:div.new-column {:on-click #(add-column)} "+ add new column"])
+  [:div.new-column {:on-click #(add-column!)} "+ add new column"])
 
 (defn Card [card-cur]
   (let [{:keys [editing title]} @card-cur]
@@ -48,22 +52,27 @@
       [:div.card.editing
        [:input {:type         "text" :value title
                 :autoFocus    true
-                :on-change    #(update-title card-cur (.. % -target -value))
-                :on-blur      #(stop-editing card-cur)
+                :on-change    #(update-card-title! card-cur (.. % -target -value))
+                :on-blur      #(stop-editing! card-cur)
                 :on-key-press #(if (= (.-charCode %) 13)
-                                (stop-editing card-cur))
+                                (stop-editing! card-cur))
                 }]]
-      [:div.card {:on-click #(start-editing card-cur)} title])))
+      [:div.card {:on-click #(start-editing! card-cur)} title])))
 
 (defn Column [col-cur]
   (let [{:keys [title cards editing]} @col-cur]
     [:div.column
      (if editing
-       [:input {:type "text" :value title}]
+       [:input {:type "text" :value title
+                :autoFocus true
+                :on-change #(update-col-title! col-cur (.. % -target -value))
+                :on-blur   #(stop-editing! col-cur)
+                :on-key-press #(if (= (.-charCode %) 13)
+                                 (stop-editing! col-cur))}]
        [:h2 title])
      (for [idx (range (count cards))]
        [Card (r/cursor col-cur [:cards idx])])
-     [NewCard]]))
+     [NewCard col-cur]]))
 
 (defn Board [state]
   [:div.board
