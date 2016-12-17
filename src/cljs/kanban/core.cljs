@@ -4,16 +4,22 @@
 (enable-console-print!)
 
 (def app-state
-  (r/atom {:columns [{:title   "Work"
+  (r/atom {:columns [{:id (random-uuid)
+                      :title   "Work"
                       :editing false
-                      :cards   [{:title "Learn about Reagent"}
-                                {:title   "Do something else"
+                      :cards   [{:id (random-uuid)
+                                 :title "Learn about Reagent"}
+                                {:id (random-uuid)
+                                 :title   "Do something else"
                                  :editing false}]}
-                     {:title   "Personal"
+                     {:id (random-uuid)
+                      :title   "Personal"
                       :editing false
-                      :cards   [{:title   "Finish Reagent tutorials"
+                      :cards   [{:id (random-uuid)
+                                 :title   "Finish Reagent tutorials"
                                  :editing false}
-                                {:title   "Finish Reagent tutorial number 2"
+                                {:id (random-uuid)
+                                 :title   "Finish Reagent tutorial number 2"
                                  :editing false}]}]}))
 
 (defn set-title! [board col-idx card-idx title]
@@ -32,19 +38,21 @@
   (swap! card-cur assoc :editing true))
 
 (defn add-card! [col-cur]
-  (swap! col-cur update :cards conj {:title "Untitled"
+  (swap! col-cur update :cards conj {:id (random-uuid)
+                                     :title "Untitled"
                                      :editing true}))
 
-(defn add-column! []
-  (swap! app-state update :columns conj {:title "Untitled"
-                                     :cards   []
-                                     :editing true}))
+(defn add-column! [board]
+  (swap! board update :columns conj {:id (random-uuid)
+                                         :title "Untitled"
+                                         :cards   []
+                                         :editing true}))
 
 (defn NewCard [col-cur]
   [:div.new-card {:on-click #(add-card! col-cur)}"+ add a card"])
 
-(defn NewColumn []
-  [:div.new-column {:on-click #(add-column!)} "+ add new column"])
+(defn NewColumn [board]
+  [:div.new-column {:on-click #(add-column! board)} "+ add new column"])
 
 (defn Card [card-cur]
   (let [{:keys [editing title]} @card-cur]
@@ -70,16 +78,18 @@
                 :on-key-press #(if (= (.-charCode %) 13)
                                  (stop-editing! col-cur))}]
        [:h2 title])
-     (for [idx (range (count cards))]
-       [Card (r/cursor col-cur [:cards idx])])
-     [NewCard col-cur]]))
+     (map-indexed (fn [idx card]
+                    (let [card-cur (r/cursor col-cur [:cards idx])]
+                      ^{:key (:id card)}[Card card-cur])) cards)
+     ^{:key "new"} [NewCard col-cur]]))
 
 (defn Board [state]
   [:div.board
-   (map-indexed (fn [idx col]
+   (map-indexed (fn [idx {id :id}]
                   (let [col-cur (r/cursor state [:columns idx])]
-                    [Column col-cur])) (:columns @state))
-   [NewColumn]])
+                    ^{:key id}[Column col-cur]))
+                (:columns @state))
+   ^{:key "new"} [NewColumn state]])
 
 (r/render [Board app-state] (js/document.getElementById "app"))
 
